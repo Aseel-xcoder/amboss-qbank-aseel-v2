@@ -1,0 +1,59 @@
+# One-time import: fetch the questions data from the original repository,
+# apply the full Dr. Reason rebrand to the data file itself, recompress it,
+# and commit it into this repository. Runs once, when this file is pushed.
+# The regular Pages workflow then builds and deploys the site from it.
+name: Import rebranded questions data
+
+on:
+  push:
+    paths: [".github/workflows/import-data.yml"]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  import:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Download source data from the original repository
+        run: |
+          curl -sSL -o AMBOSSQBank.html.gz \
+            https://raw.githubusercontent.com/Aseel-xcoder/amboss-qbank-aseel/main/AMBOSSQBank.html.gz
+          test -s AMBOSSQBank.html.gz
+
+      - name: Rebrand data file and recompress
+        run: |
+          python3 - <<'PY'
+          import gzip, re
+          with gzip.open("AMBOSSQBank.html.gz", "rt", encoding="utf-8") as f:
+              src = f.read()
+          # Legacy script-font display names -> Dr. Reason.
+          for old in ("𝓢𝓱𝓪𝓲𝓯", "𝓐𝓼𝓮𝓮𝓵"):
+              src = src.replace(old, "Dr. Reason")
+          # Normalize every Telegram handle to the channel.
+          src = re.sub(r"https://t\.me/[A-Za-z0-9_]+", "https://t.me/Med_tips_and_tricks", src)
+          # Verify the rebrand: no legacy display name remains, every
+          # Telegram link points at the channel, Dr. Reason is present.
+          assert "𝓢𝓱𝓪𝓲𝓯" not in src and "𝓐𝓼𝓮𝓮𝓵" not in src
+          assert set(re.findall(r"https://t\.me/[A-Za-z0-9_]+", src)) == {"https://t.me/Med_tips_and_tricks"}
+          assert "Dr. Reason" in src
+          print("Dr. Reason occurrences:", src.count("Dr. Reason"))
+          with gzip.open("AMBOSSQBank.html.gz", "wt", encoding="utf-8", compresslevel=9, mtime=0) as f:
+              f.write(src)
+          PY
+
+      - name: Commit rebranded data file
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add AMBOSSQBank.html.gz
+          if git diff --cached --quiet; then
+            echo "Data file already rebranded; nothing to commit."
+          else
+            git commit -m "Import fully rebranded questions data (Dr. Reason)"
+            git push
+          fi
