@@ -42,7 +42,7 @@ jobs:
           assert set(re.findall(r"https://t\.me/[A-Za-z0-9_]+", src)) == {"https://t.me/Med_tips_and_tricks"}
           assert "Dr. Reason" in src
           print("Dr. Reason occurrences:", src.count("Dr. Reason"))
-          with gzip.open("AMBOSSQBank.html.gz", "wt", encoding="utf-8", compresslevel=9, mtime=0) as f:
+          with gzip.open("AMBOSSQBank.html.gz", "wt", encoding="utf-8", compresslevel=9) as f:
               f.write(src)
           PY
 
