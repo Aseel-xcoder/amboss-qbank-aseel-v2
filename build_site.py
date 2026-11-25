@@ -310,8 +310,39 @@ async function updateBuilder() {
     # Protect against accidentally publishing a second large data array or API route.
     if "fetch(\"/api/tests/" in page:
         raise RuntimeError("A server-only question API reference remains in the built HTML")
+    # Strip the old Manus Open Graph tags inherited from the source data:
+    # their og:image is a frozen checkpoint screenshot of the page from
+    # before the rebrand (it shows the old name), and Telegram uses that
+    # image for every link preview no matter the URL.
+    old_og = re.findall(r'<meta[^>]*(?:property="og:[^"]*"|name="twitter:[^"]*")[^>]*>', page)
+    if old_og:
+        print(f"Removing {len(old_og)} legacy Open Graph/Twitter tags…", flush=True)
+        page = re.sub(r'<meta[^>]*(?:property="og:[^"]*"|name="twitter:[^"]*")[^>]*>\n?', "", page)
+    og_tags = (
+        '<meta property="og:type" content="website">\n'
+        '<meta property="og:title" content="AMBOSS QBank — Schwartz Surgery QBank">\n'
+        '<meta property="og:description" content="1266 tests, 21247 questions. Done by Dr. Reason.">\n'
+        '<meta property="og:url" content="https://aseel-xcoder.github.io/amboss-qbank-aseel-v2/">\n'
+        '<meta property="og:image" content="https://aseel-xcoder.github.io/amboss-qbank-aseel-v2/preview.png">\n'
+        '<meta property="og:image:width" content="1200">\n'
+        '<meta property="og:image:height" content="630">\n'
+        '<meta name="twitter:card" content="summary_large_image">\n'
+        '<meta name="twitter:title" content="AMBOSS QBank — Schwartz Surgery QBank">\n'
+        '<meta name="twitter:description" content="1266 tests, 21247 questions. Done by Dr. Reason.">\n'
+        '<meta name="twitter:image" content="https://aseel-xcoder.github.io/amboss-qbank-aseel-v2/preview.png">\n'
+    )
+    page = replace_once(
+        page,
+        '<link rel="manifest" href="/__manus/pwa/manifest.webmanifest" crossorigin="use-credentials" /></head>',
+        '<link rel="manifest" href="/__manus/pwa/manifest.webmanifest" crossorigin="use-credentials" />\n' + og_tags + "</head>",
+        "head close for Open Graph tags",
+    )
     (OUT / "index.html").write_text(page, encoding="utf-8")
     shutil.copyfile(ROUTES, OUT / "manus-routes.json")
+    preview = ROOT / "preview.png"
+    if not preview.is_file():
+        raise FileNotFoundError("Expected preview.png in the repository root for the link-preview image")
+    shutil.copyfile(preview, OUT / "preview.png")
     (OUT / ".nojekyll").write_text("", encoding="utf-8")
 
     print("Writing the rebranded standalone HTML download…", flush=True)
