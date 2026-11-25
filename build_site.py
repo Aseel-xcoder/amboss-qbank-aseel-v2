@@ -80,6 +80,10 @@ def main() -> None:
         print("Source carries the Dr. Reason branding.", flush=True)
     # Telegram links: normalize any handle to the channel.
     source = re.sub(r"https://t\.me/[A-Za-z0-9_]+", "https://t.me/Med_tips_and_tricks", source)
+    # Site branding: the bank is AMBOSS, not Schwartz (Schwartz is only the
+    # textbook the questions came from). Only the heading phrase is replaced;
+    # the clinical eponym "Schwartze sign" in question content is untouched.
+    source = source.replace("Schwartz Surgery QBank", "Surgery QBank")
     if source.count(ARRAY_MARKER) != 1:
         raise RuntimeError("Could not uniquely locate the source TESTS_LIST array")
 
@@ -320,14 +324,14 @@ async function updateBuilder() {
         page = re.sub(r'<meta[^>]*(?:property="og:[^"]*"|name="twitter:[^"]*")[^>]*>\n?', "", page)
     og_tags = (
         '<meta property="og:type" content="website">\n'
-        '<meta property="og:title" content="AMBOSS QBank — Schwartz Surgery QBank">\n'
+        '<meta property="og:title" content="AMBOSS QBank">\n'
         '<meta property="og:description" content="1266 tests, 21247 questions. Done by Dr. Reason.">\n'
         '<meta property="og:url" content="https://aseel-xcoder.github.io/amboss-qbank-aseel-v2/">\n'
         '<meta property="og:image" content="https://aseel-xcoder.github.io/amboss-qbank-aseel-v2/preview.png">\n'
         '<meta property="og:image:width" content="1200">\n'
         '<meta property="og:image:height" content="630">\n'
         '<meta name="twitter:card" content="summary_large_image">\n'
-        '<meta name="twitter:title" content="AMBOSS QBank — Schwartz Surgery QBank">\n'
+        '<meta name="twitter:title" content="AMBOSS QBank">\n'
         '<meta name="twitter:description" content="1266 tests, 21247 questions. Done by Dr. Reason.">\n'
         '<meta name="twitter:image" content="https://aseel-xcoder.github.io/amboss-qbank-aseel-v2/preview.png">\n'
     )
