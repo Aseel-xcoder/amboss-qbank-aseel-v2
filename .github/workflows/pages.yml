@@ -1,0 +1,62 @@
+name: Deploy AMBOSS QBank to GitHub Pages
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: github-pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v6
+
+      - name: Configure GitHub Pages
+        uses: actions/configure-pages@v5
+
+      - name: Split tests and build the fast landing page
+        run: python3 build_site.py
+
+      - name: Verify generated site
+        run: |
+          set -eu
+          test -s _site/index.html
+          test -s _site/downloads/AMBOSSQBank.html
+          test -s _site/manus-routes.json
+          test "$(find _site/tests -maxdepth 1 -type f -name '*.json' | wc -l)" -eq 1266
+          python3 - <<'PY'
+          from pathlib import Path
+          total = sum(p.stat().st_size for p in Path('_site').rglob('*') if p.is_file())
+          assert total < 1_000_000_000, f'Pages site too large: {total}'
+          print(f'Pages output size: {total:,} bytes')
+          PY
+          sha256sum _site/downloads/AMBOSSQBank.html
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v4
+        with:
+          path: _site
+
+  deploy:
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    needs: build
+    permissions:
+      pages: write
+      id-token: write
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
